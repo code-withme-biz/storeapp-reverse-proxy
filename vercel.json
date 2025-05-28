@@ -9,11 +9,11 @@
   "routes": [
     {
       "src": "/storeapp/(.*)",
-      "dest": "/api/index"
+      "dest": "/api/index.js"
     },
     {
       "src": "/",
-      "dest": "/api/index"
+      "dest": "/api/index.js"
     }
   ]
 }
