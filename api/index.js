@@ -46,30 +46,24 @@ app.use(
           const contentType = proxyRes.headers['content-type'];
           let response = responseBuffer.toString('utf8');
   
+          // HTML rewriting
           if (contentType?.includes('text/html')) {
-            response = response.replace(
-              /(href|src|action)=["'](\/[^"']*)["']/g,
-              '$1="/storeapp$2"'
-            );
-  
-            if (!response.includes('<base href')) {
-              response = response.replace(
-                /<head([^>]*)>/i,
-                `<head$1><base href="/storeapp/">`
-              );
-            }
+            response = response
+              // Rewrite absolute paths
+              .replace(/(href|src|action)=["'](\/[^"']*)["']/g, '$1="/storeapp$2"')
+              // Add base tag
+              .replace(/<head([^>]*)>/i, '<head$1><base href="/storeapp/">');
           }
   
+          // Cookie modification
           if (proxyRes.headers['set-cookie']) {
-            const newCookies = proxyRes.headers['set-cookie'].map(cookie => {
+            res.setHeader('set-cookie', proxyRes.headers['set-cookie'].map(cookie => {
               return decodeURIComponent(cookie)
                 .replace(/domain=.mschost.net/gi, '')
                 .replace(/samesite=none/gi, 'samesite=lax')
                 .replace(/\bsecure\b/gi, '')
-                .replace(/path=\/[^;]*/gi, 'path=/')
-                .replace(/expires=[^;]+/gi, 'expires=Fri, 31 Dec 9999 23:59:59 GMT');
-            });
-            res.setHeader('set-cookie', newCookies);
+                .replace(/path=\/[^;]*/gi, 'path=/storeapp');
+            }));
           }
   
           return response;
@@ -90,13 +84,8 @@ app.use(
     pathRewrite: {
       '^/storeapp': '',
     },
-
     // Other important options
     secure: false, // Only for development
-    preserveHeaderKeyCase: true,
-    followRedirects: true,
-    autoRewrite: true,
-    xfwd: true // Forward headers
   })
 )
 
