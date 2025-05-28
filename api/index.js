@@ -45,9 +45,11 @@ app.use(
         if (proxyRes.headers['set-cookie']) {
           const cookies = proxyRes.headers['set-cookie'].map((cookie) => {
             if (cookie.startsWith('site_id=')) {
+              console.log('🟢 Cookie:', cookie);
               return cookie
-                .replace(/SameSite=None; Secure/g, 'SameSite=Lax')
-                .replace(/Domain=storeapp.mschost.net/g, '')
+                .replace(/samesite=none/g, 'samesite=lax')
+                .replace(/domain=.mschost.net/g, '')
+                .replace(/secure/g, '')
             }
             return cookie
           })
