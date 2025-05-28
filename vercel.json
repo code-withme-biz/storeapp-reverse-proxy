@@ -12,6 +12,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/storeapp",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/",
       "dest": "/api/index.js"
     }
