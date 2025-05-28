@@ -25,6 +25,10 @@ app.use(
   createProxyMiddleware({
     target: 'https://storeapp.mschost.net',
     changeOrigin: true,
+    secure: false,
+    headers: {
+      Host: 'storeapp.mschost.net',
+    },
     logLevel: 'debug',
     on: {
       proxyReq: (proxyReq, req, res) => {
