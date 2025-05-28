@@ -43,17 +43,23 @@ app.use(
           headers: proxyRes.headers
         });
         if (proxyRes.headers['set-cookie']) {
-          const cookies = proxyRes.headers['set-cookie'].map((cookie) => {
-            if (cookie.startsWith('site_id=')) {
-              console.log('🟢 Cookie:', cookie);
-              return cookie
-                .replace(/samesite=none/g, 'samesite=lax')
-                .replace(/domain=.mschost.net/g, '')
-                .replace(/secure/g, '')
+          proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map((cookie) => {
+            let modified = decodeURIComponent(cookie);
+            
+            modified = modified
+              .replace(/domain=.mschost.net/gi, '')
+              .replace(/samesite=none/gi, 'samesite=lax')
+              .replace(/\bsecure\b/gi, '');
+            
+            if (modified.startsWith('site_id=')) {
+              modified = modified.replace(
+                /expires=[^;]+/gi, 
+                'expires=Fri, 31 Dec 9999 23:59:59 GMT'
+              );
             }
-            return cookie
-          })
-          proxyRes.headers['set-cookie'] = cookies
+            
+            return encodeURIComponent(modified);
+          });
         }
       },
       error: (err, req, res) => {
