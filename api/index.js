@@ -23,11 +23,11 @@ app.get('/', (req, res) => {
 app.use(
   '/storeapp',
   createProxyMiddleware({
-    target: 'https://storeapp.mschost.net',
+    target: 'https://storeappwave.mschost.net',
     changeOrigin: true,
     secure: false,
     headers: {
-      Host: 'storeapp.mschost.net',
+      Host: 'storeappwave.mschost.net',
     },
     logLevel: 'debug',
     on: {
