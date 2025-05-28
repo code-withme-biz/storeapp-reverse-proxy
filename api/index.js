@@ -5,8 +5,12 @@ import cookieParser from 'cookie-parser'
 const app = express()
 app.use(cookieParser())
 
+app.get('/', (req, res) => {
+  res.send('Reverse Proxy Running. Use /proxy-example to forward requests.');
+});
+
 app.use(
-  '/',
+  '/storeapp',
   createProxyMiddleware({
     target: 'https://storeapp.mschost.net',
     changeOrigin: true,
@@ -24,9 +28,9 @@ app.use(
       }
     },
     pathRewrite: {
-      '^/': '',
+      '^/storeapp': '',
     },
   })
 )
 
-app.listen(3000, () => console.log('Proxy running on http://localhost:3000'))
+module.exports = app
