@@ -1,5 +1,5 @@
 import express from 'express'
-import { createProxyMiddleware } from 'http-proxy-middleware'
+import { createProxyMiddleware, responseInterceptor } from 'http-proxy-middleware'
 import cookieParser from 'cookie-parser'
 
 const app = express()
@@ -25,7 +25,7 @@ app.use(
   createProxyMiddleware({
     target: 'https://storeappwave.mschost.net',
     changeOrigin: true,
-    secure: false,
+    selfHandleResponse: true,
     headers: {
       Host: 'storeappwave.mschost.net',
     },
@@ -37,31 +37,47 @@ app.use(
           headers: proxyReq.getHeaders()
         });
       },
-      proxyRes: (proxyRes) => {
+      proxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
         console.log('🟢 Proxy Response:', {
           statusCode: proxyRes.statusCode,
           headers: proxyRes.headers
         });
-        if (proxyRes.headers['set-cookie']) {
-          proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map((cookie) => {
-            let modified = decodeURIComponent(cookie);
-            
-            modified = modified
-              .replace(/domain=.mschost.net/gi, '')
-              .replace(/samesite=none/gi, 'samesite=lax')
-              .replace(/\bsecure\b/gi, '');
-            
-            if (modified.startsWith('site_id=')) {
-              modified = modified.replace(
-                /expires=[^;]+/gi, 
-                'expires=Fri, 31 Dec 9999 23:59:59 GMT'
+        try {
+          const contentType = proxyRes.headers['content-type'];
+          let response = responseBuffer.toString('utf8');
+  
+          if (contentType?.includes('text/html')) {
+            response = response.replace(
+              /(href|src|action)=["'](\/[^"']*)["']/g,
+              '$1="/storeapp$2"'
+            );
+  
+            if (!response.includes('<base href')) {
+              response = response.replace(
+                /<head([^>]*)>/i,
+                `<head$1><base href="/storeapp/">`
               );
             }
-            
-            return encodeURIComponent(modified);
-          });
+          }
+  
+          if (proxyRes.headers['set-cookie']) {
+            const newCookies = proxyRes.headers['set-cookie'].map(cookie => {
+              return decodeURIComponent(cookie)
+                .replace(/domain=.mschost.net/gi, '')
+                .replace(/samesite=none/gi, 'samesite=lax')
+                .replace(/\bsecure\b/gi, '')
+                .replace(/path=\/[^;]*/gi, 'path=/')
+                .replace(/expires=[^;]+/gi, 'expires=Fri, 31 Dec 9999 23:59:59 GMT');
+            });
+            res.setHeader('set-cookie', newCookies);
+          }
+  
+          return response;
+        } catch (error) {
+          console.error('Response modification error:', error);
+          return responseBuffer;
         }
-      },
+      }),
       error: (err, req, res) => {
         console.error('🔴 Proxy Error:', err);
         res.status(500).json({ 
@@ -74,7 +90,22 @@ app.use(
     pathRewrite: {
       '^/storeapp': '',
     },
+
+    // Other important options
+    secure: false, // Only for development
+    preserveHeaderKeyCase: true,
+    followRedirects: true,
+    autoRewrite: true,
+    xfwd: true // Forward headers
   })
 )
+
+app.use('/storeapp/:asset(*)', createProxyMiddleware({
+  target: 'https://storeappwave.mschost.net',
+  changeOrigin: true,
+  pathRewrite: {
+    '^/storeapp': ''
+  }
+}));
 
 export default app
